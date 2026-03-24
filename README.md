@@ -12,19 +12,19 @@ No need to clone this repo. Just run these commands in **your own git project**:
 
 ```bash
 # 1. Set up your API key (one-time)
-npx ai-commit config
+npx aicommit config
 
 # 2. Stage your changes as usual
 git add .
 
 # 3. Let AI generate your commit message
-npx ai-commit
+npx aicommit
 ```
 
 ## Demo
 
 ```
-$ npx ai-commit
+$ npx aicommit
 
 🔍 Analyzing staged changes...
 
@@ -60,10 +60,10 @@ This is an npm package. You can use it in any git repository without cloning thi
 
 ```bash
 # Option 1: Use directly with npx (no install needed)
-npx ai-commit
+npx aicommit
 
 # Option 2: Install globally for faster access
-npm install -g ai-commit
+npm install -g aicommit
 ```
 
 **Requirements:** Node.js >= 18
@@ -82,15 +82,15 @@ node bin/ai-commit.js --help
 ## Usage
 
 ```bash
-ai-commit                      # Default provider
-ai-commit --provider openai    # Use OpenAI
-ai-commit --lang ko            # Korean commit messages
-ai-commit config               # Set up API keys
+aicommit                     # Default provider
+aicommit--provider openai    # Use OpenAI
+aicommit--lang ko            # Korean commit messages
+aicommitconfig               # Set up API keys
 ```
 
 ## Configuration
 
-Run `ai-commit config` for interactive setup, or edit `~/.ai-commit.json` directly:
+Run `aicommit config` for interactive setup, or edit `~/.ai-commit.json` directly:
 
 ```json
 {
