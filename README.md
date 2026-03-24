@@ -50,6 +50,7 @@ $ npx aicommit
 
 - **Multi-provider** — Claude API and OpenAI API, switchable anytime
 - **Conventional Commits** — Follows the standard format (`feat`, `fix`, `refactor`, ...)
+- **Gitmoji** — Optional emoji prefixes (`--gitmoji`) for ✨ 🐛 ♻️ and more
 - **Multilingual** — English and Korean commit messages (`--lang ko`)
 - **Interactive** — Select, edit, or regenerate suggestions
 - **Zero config start** — Works with `npx`, no global install needed
@@ -82,10 +83,11 @@ node bin/ai-commit.js --help
 ## Usage
 
 ```bash
-aicommit                     # Default provider
-aicommit--provider openai    # Use OpenAI
-aicommit--lang ko            # Korean commit messages
-aicommitconfig               # Set up API keys
+aicommit                      # Default provider
+aicommit --provider openai    # Use OpenAI
+aicommit --lang ko            # Korean commit messages
+aicommit --gitmoji            # Add gitmoji (✨ 🐛 ♻️)
+aicommit config               # Set up API keys
 ```
 
 ## Configuration
@@ -97,6 +99,7 @@ Run `aicommit config` for interactive setup, or edit `~/.ai-commit.json` directl
   "provider": "claude",
   "language": "en",
   "conventionalCommit": true,
+  "gitmoji": false,
   "maxSuggestions": 3
 }
 ```

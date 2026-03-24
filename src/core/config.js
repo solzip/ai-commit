@@ -10,6 +10,7 @@ const DEFAULT_CONFIG = {
   provider: 'claude',
   language: 'en',
   conventionalCommit: true,
+  gitmoji: false,
   maxSuggestions: 3,
 };
 
@@ -86,6 +87,12 @@ export async function runConfigWizard() {
       name: 'conventionalCommit',
       message: 'Use Conventional Commits?',
       default: current.conventionalCommit,
+    },
+    {
+      type: 'confirm',
+      name: 'gitmoji',
+      message: 'Use Gitmoji? (✨ 🐛 ♻️ ...)',
+      default: current.gitmoji,
     },
   ]);
 

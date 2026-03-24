@@ -48,6 +48,7 @@ $ npx aicommit
 
 - **멀티 프로바이더** — Claude API와 OpenAI API를 자유롭게 전환
 - **Conventional Commits** — 표준 포맷 준수 (`feat`, `fix`, `refactor`, ...)
+- **Gitmoji** — 이모지 프리픽스 지원 (`--gitmoji`) ✨ 🐛 ♻️ 등
 - **다국어 지원** — 영어 및 한국어 커밋 메시지 (`--lang ko`)
 - **인터랙티브** — 메시지 선택, 수정, 재생성
 - **설치 불필요** — `npx`로 바로 사용 가능
@@ -80,10 +81,11 @@ node bin/ai-commit.js --help
 ## 사용법
 
 ```bash
-aicommit                     # 기본 프로바이더 사용
-aicommit--provider openai    # OpenAI 사용
-aicommit--lang ko            # 한국어 커밋 메시지
-aicommitconfig               # API 키 설정
+aicommit                      # 기본 프로바이더 사용
+aicommit --provider openai    # OpenAI 사용
+aicommit --lang ko            # 한국어 커밋 메시지
+aicommit --gitmoji            # Gitmoji 추가 (✨ 🐛 ♻️)
+aicommit config               # API 키 설정
 ```
 
 ## 설정
@@ -95,6 +97,7 @@ aicommitconfig               # API 키 설정
   "provider": "claude",
   "language": "en",
   "conventionalCommit": true,
+  "gitmoji": false,
   "maxSuggestions": 3
 }
 ```

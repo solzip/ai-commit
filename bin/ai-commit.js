@@ -19,6 +19,7 @@ program
   .version('1.0.0')
   .option('--provider <name>', 'AI provider (claude, openai)')
   .option('--lang <code>', 'Language (en, ko)')
+  .option('--gitmoji', 'Add gitmoji to commit messages')
   .action(run);
 
 program
@@ -80,6 +81,7 @@ async function run(opts) {
   const options = {
     language,
     conventionalCommit: config.conventionalCommit,
+    gitmoji: opts.gitmoji || config.gitmoji || false,
     maxSuggestions: config.maxSuggestions,
   };
 
