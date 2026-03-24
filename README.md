@@ -1,5 +1,7 @@
 # ai-commit
 
+[한국어](./README.ko.md)
+
 AI-powered git commit message generator CLI.
 
 Analyzes your staged changes and suggests [Conventional Commit](https://www.conventionalcommits.org/) messages using Claude or OpenAI.
