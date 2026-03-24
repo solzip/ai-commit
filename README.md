@@ -8,10 +8,17 @@ Analyzes your staged changes and suggests [Conventional Commit](https://www.conv
 
 ## Quick Start
 
+No need to clone this repo. Just run these commands in **your own git project**:
+
 ```bash
-npx ai-commit config    # Set up API key
+# 1. Set up your API key (one-time)
+npx ai-commit config
+
+# 2. Stage your changes as usual
 git add .
-npx ai-commit           # Generate commit messages
+
+# 3. Let AI generate your commit message
+npx ai-commit
 ```
 
 ## Demo
@@ -49,15 +56,28 @@ $ npx ai-commit
 
 ## Install
 
+This is an npm package. You can use it in any git repository without cloning this source code.
+
 ```bash
-# Use directly with npx (no install)
+# Option 1: Use directly with npx (no install needed)
 npx ai-commit
 
-# Or install globally
+# Option 2: Install globally for faster access
 npm install -g ai-commit
 ```
 
 **Requirements:** Node.js >= 18
+
+### For Contributors
+
+If you want to contribute to this project:
+
+```bash
+git clone https://github.com/solzip/ai-commit.git
+cd ai-commit
+npm install
+node bin/ai-commit.js --help
+```
 
 ## Usage
 
