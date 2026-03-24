@@ -117,7 +117,7 @@ git diff --staged
 
 ## 4. YAGNI Review
 
-### v1.0 In Scope
+### v1.0 ✅
 - [x] git diff --staged 읽기 + git commit 실행
 - [x] AI Provider 인터페이스 + Claude/OpenAI 구현체
 - [x] Provider Registry (등록/조회)
@@ -125,11 +125,16 @@ git diff --staged
 - [x] CLI 인터랙션 (선택/수정/재생성)
 - [x] `--lang` 옵션 (ko/en)
 - [x] `--provider` 옵션
+- [x] `--gitmoji` 옵션
 - [x] `config` 명령어 (API 키 대화형 설정)
 - [x] 에러 핸들링 (no staged files, API 에러, no git repo)
 
+### v1.1.0 (Planned)
+- [ ] Ollama 프로바이더 (로컬 LLM, 완전 무료, API 키 불필요)
+- [ ] Ollama 자동 감지 (localhost:11434 연결 확인)
+
 ### Out of Scope (v2+)
-- Gemini, Ollama 등 추가 프로바이더
+- Gemini 등 추가 클라우드 프로바이더
 - 커스텀 프롬프트 템플릿
 - git hook 자동 설치
 - monorepo scope 감지
