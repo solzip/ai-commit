@@ -14,11 +14,12 @@ registerBuiltInProviders();
 const program = new Command();
 
 program
-  .name('ai-commit')
+  .name('aicommit')
   .description('AI-powered git commit message generator')
   .version('1.0.0')
   .option('--provider <name>', 'AI provider (claude, openai)')
   .option('--lang <code>', 'Language (en, ko)')
+  .option('--gitmoji', 'Add gitmoji to commit messages')
   .action(run);
 
 program
@@ -57,7 +58,7 @@ async function run(opts) {
   const apiKey = config[apiKeyField];
 
   if (!apiKey) {
-    console.error(chalk.red(`❌ API key not configured for ${providerName}. Run 'ai-commit config'`));
+    console.error(chalk.red(`❌ API key not configured for ${providerName}. Run 'aicommit config'`));
     process.exit(1);
   }
 
@@ -80,6 +81,7 @@ async function run(opts) {
   const options = {
     language,
     conventionalCommit: config.conventionalCommit,
+    gitmoji: opts.gitmoji || config.gitmoji || false,
     maxSuggestions: config.maxSuggestions,
   };
 
@@ -123,7 +125,7 @@ async function callAI(provider, diff, options, isRetry = false) {
       spinner.fail(msg.startsWith('❌') ? msg : `❌ ${msg}`);
     }
     if (msg.includes('Invalid API key')) {
-      console.log(chalk.yellow(`\n💡 Run 'ai-commit config' to update your API key`));
+      console.log(chalk.yellow(`\n💡 Run 'aicommit config' to update your API key`));
     }
     process.exit(1);
   }

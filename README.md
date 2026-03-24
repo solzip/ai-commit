@@ -1,21 +1,30 @@
 # ai-commit
 
+[한국어](./README.ko.md)
+
 AI-powered git commit message generator CLI.
 
 Analyzes your staged changes and suggests [Conventional Commit](https://www.conventionalcommits.org/) messages using Claude or OpenAI.
 
 ## Quick Start
 
+No need to clone this repo. Just run these commands in **your own git project**:
+
 ```bash
-npx ai-commit config    # Set up API key
+# 1. Set up your API key (one-time)
+npx aicommit config
+
+# 2. Stage your changes as usual
 git add .
-npx ai-commit           # Generate commit messages
+
+# 3. Let AI generate your commit message
+npx aicommit
 ```
 
 ## Demo
 
 ```
-$ npx ai-commit
+$ npx aicommit
 
 🔍 Analyzing staged changes...
 
@@ -41,40 +50,56 @@ $ npx ai-commit
 
 - **Multi-provider** — Claude API and OpenAI API, switchable anytime
 - **Conventional Commits** — Follows the standard format (`feat`, `fix`, `refactor`, ...)
+- **Gitmoji** — Optional emoji prefixes (`--gitmoji`) for ✨ 🐛 ♻️ and more
 - **Multilingual** — English and Korean commit messages (`--lang ko`)
 - **Interactive** — Select, edit, or regenerate suggestions
 - **Zero config start** — Works with `npx`, no global install needed
 
 ## Install
 
-```bash
-# Use directly with npx (no install)
-npx ai-commit
+This is an npm package. You can use it in any git repository without cloning this source code.
 
-# Or install globally
-npm install -g ai-commit
+```bash
+# Option 1: Use directly with npx (no install needed)
+npx aicommit
+
+# Option 2: Install globally for faster access
+npm install -g aicommit
 ```
 
 **Requirements:** Node.js >= 18
 
+### For Contributors
+
+If you want to contribute to this project:
+
+```bash
+git clone https://github.com/solzip/ai-commit.git
+cd ai-commit
+npm install
+node bin/ai-commit.js --help
+```
+
 ## Usage
 
 ```bash
-ai-commit                      # Default provider
-ai-commit --provider openai    # Use OpenAI
-ai-commit --lang ko            # Korean commit messages
-ai-commit config               # Set up API keys
+aicommit                      # Default provider
+aicommit --provider openai    # Use OpenAI
+aicommit --lang ko            # Korean commit messages
+aicommit --gitmoji            # Add gitmoji (✨ 🐛 ♻️)
+aicommit config               # Set up API keys
 ```
 
 ## Configuration
 
-Run `ai-commit config` for interactive setup, or edit `~/.ai-commit.json` directly:
+Run `aicommit config` for interactive setup, or edit `~/.ai-commit.json` directly:
 
 ```json
 {
   "provider": "claude",
   "language": "en",
   "conventionalCommit": true,
+  "gitmoji": false,
   "maxSuggestions": 3
 }
 ```
