@@ -6,10 +6,17 @@ AI 기반 git 커밋 메시지 자동 생성 CLI 도구.
 
 ## 빠른 시작
 
+이 저장소를 클론할 필요 없습니다. **본인의 git 프로젝트**에서 바로 실행하세요:
+
 ```bash
-npx ai-commit config    # API 키 설정
+# 1. API 키 설정 (최초 1회)
+npx ai-commit config
+
+# 2. 변경사항 스테이징
 git add .
-npx ai-commit           # 커밋 메시지 생성
+
+# 3. AI가 커밋 메시지 생성
+npx ai-commit
 ```
 
 ## 데모
@@ -47,15 +54,28 @@ $ npx ai-commit
 
 ## 설치
 
+npm 패키지입니다. 이 소스 코드를 클론하지 않아도 어떤 git 저장소에서든 바로 사용할 수 있습니다.
+
 ```bash
-# npx로 바로 사용 (설치 불필요)
+# 방법 1: npx로 바로 사용 (설치 불필요)
 npx ai-commit
 
-# 또는 전역 설치
+# 방법 2: 전역 설치 (더 빠른 실행)
 npm install -g ai-commit
 ```
 
 **요구사항:** Node.js >= 18
+
+### 기여자용
+
+이 프로젝트에 기여하고 싶다면:
+
+```bash
+git clone https://github.com/solzip/ai-commit.git
+cd ai-commit
+npm install
+node bin/ai-commit.js --help
+```
 
 ## 사용법
 
