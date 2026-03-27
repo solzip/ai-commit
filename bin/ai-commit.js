@@ -5,7 +5,7 @@ import inquirer from 'inquirer';
 import chalk from 'chalk';
 import ora from 'ora';
 import { loadConfig, runConfigWizard } from '../src/core/config.js';
-import { isGitRepo, getStagedDiff, execCommit } from '../src/core/git.js';
+import { isGitRepo, getStagedDiff, getStagedFiles, execCommit } from '../src/core/git.js';
 import { buildPrompt, truncateDiff } from '../src/core/prompt.js';
 import { registerBuiltInProviders, getProvider } from '../src/providers/registry.js';
 
@@ -50,6 +50,10 @@ async function run(opts) {
     process.exit(1);
   }
 
+  // 2-1. staged 파일 목록 표시
+  const stagedFiles = getStagedFiles();
+  console.log(chalk.dim(`\nStaged files:\n${stagedFiles.split('\n').map(f => `  ${f}`).join('\n')}\n`));
+
   // 3. config 로드
   const config = loadConfig();
   const providerName = opts.provider || config.provider;
@@ -58,14 +62,21 @@ async function run(opts) {
   const apiKey = config[apiKeyField];
 
   if (!apiKey) {
-    console.error(chalk.red(`❌ API key not configured for ${providerName}. Run 'aicommit config'`));
+    console.log(chalk.yellow(`\n⚠️  API key not configured for ${providerName}.`));
+    const { runSetup } = await inquirer.prompt([
+      { type: 'confirm', name: 'runSetup', message: 'Run setup now?', default: true },
+    ]);
+    if (runSetup) {
+      await runConfigWizard();
+      return run(opts);
+    }
     process.exit(1);
   }
 
   // 4. provider 가져오기
   let provider;
   try {
-    provider = getProvider(providerName, apiKey);
+    provider = getProvider(providerName, apiKey, config);
   } catch (err) {
     console.error(chalk.red(`❌ ${err.message}`));
     process.exit(1);
@@ -89,10 +100,18 @@ async function run(opts) {
 }
 
 async function generateAndSelect(provider, diff, options) {
-  const messages = await callAI(provider, diff, options);
+  let messages = await callAI(provider, diff, options);
   if (!messages) return;
 
-  await promptUser(messages, provider, diff, options);
+  while (true) {
+    const result = await promptUser(messages);
+    if (result === '__regen__') {
+      messages = await callAI(provider, diff, options);
+      if (!messages) return;
+      continue;
+    }
+    break;
+  }
 }
 
 async function callAI(provider, diff, options, isRetry = false) {
@@ -119,7 +138,7 @@ async function callAI(provider, diff, options, isRetry = false) {
     return messages;
   } catch (err) {
     const msg = err.message;
-    if (msg.includes('Network') || msg.includes('fetch')) {
+    if (msg.includes('Network') || msg.includes('fetch') || msg.includes('timed out')) {
       spinner.fail('❌ Network error. Check your connection');
     } else {
       spinner.fail(msg.startsWith('❌') ? msg : `❌ ${msg}`);
@@ -131,7 +150,7 @@ async function callAI(provider, diff, options, isRetry = false) {
   }
 }
 
-async function promptUser(messages, provider, diff, options) {
+async function promptUser(messages) {
   console.log(chalk.bold('\n📝 Suggested commit messages:\n'));
   messages.forEach((msg, i) => {
     console.log(`  ${chalk.cyan(i + 1 + '.')} ${msg}`);
@@ -161,8 +180,7 @@ async function promptUser(messages, provider, diff, options) {
   }
 
   if (action === '__regen__') {
-    await generateAndSelect(provider, diff, options);
-    return;
+    return '__regen__';
   }
 
   if (action === '__edit__') {
@@ -185,6 +203,7 @@ async function doCommit(message) {
   try {
     execCommit(message);
     console.log(chalk.green(`\n✅ Committed: ${message}`));
+    console.log(chalk.dim(`   Undo: git reset --soft HEAD~1 | Amend: git commit --amend`));
   } catch (err) {
     console.error(chalk.red(`❌ Commit failed: ${err.message}`));
     process.exit(1);

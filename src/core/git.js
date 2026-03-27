@@ -19,6 +19,11 @@ export function getStagedDiffStat() {
   return stat.trim();
 }
 
+export function getStagedFiles() {
+  const files = execSync('git diff --staged --name-only', { encoding: 'utf-8' });
+  return files.trim();
+}
+
 export function execCommit(message) {
   execSync(`git commit -m ${JSON.stringify(message)}`, { stdio: 'pipe' });
 }
