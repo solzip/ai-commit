@@ -125,8 +125,13 @@ git diff --staged
 - [x] CLI 인터랙션 (선택/수정/재생성)
 - [x] `--lang` 옵션 (ko/en)
 - [x] `--provider` 옵션
+- [x] `--gitmoji` 옵션 (Gitmoji + Conventional Commit 조합)
 - [x] `config` 명령어 (API 키 대화형 설정)
 - [x] 에러 핸들링 (no staged files, API 에러, no git repo)
+- [x] Configurable model/timeout (config 파일로 변경 가능)
+- [x] fetch 타임아웃 (AbortController, 30초 default)
+- [x] Staged 파일 목록 표시, 커밋 후 undo 힌트
+- [x] API 키 미설정 시 config wizard 자동 안내
 
 ### Out of Scope (v2+)
 - Gemini, Ollama 등 추가 프로바이더
