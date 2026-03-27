@@ -100,7 +100,10 @@ Run `aicommit config` for interactive setup, or edit `~/.ai-commit.json` directl
   "language": "en",
   "conventionalCommit": true,
   "gitmoji": false,
-  "maxSuggestions": 3
+  "maxSuggestions": 3,
+  "claudeModel": "claude-sonnet-4-20250514",
+  "openaiModel": "gpt-4o-mini",
+  "timeout": 30000
 }
 ```
 
@@ -113,10 +116,12 @@ export AI_COMMIT_OPENAI_KEY=sk-...
 
 ## Supported Providers
 
-| Provider | Model | Max Diff |
-|----------|-------|----------|
+| Provider | Default Model | Max Diff |
+|----------|---------------|----------|
 | Claude | claude-sonnet-4-20250514 | ~15,000 chars |
 | OpenAI | gpt-4o-mini | ~12,000 chars |
+
+Models can be changed in `~/.ai-commit.json` via `claudeModel` and `openaiModel`.
 
 Adding a new provider? See [Provider Guide](#adding-a-provider).
 

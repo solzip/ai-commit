@@ -12,6 +12,9 @@ const DEFAULT_CONFIG = {
   conventionalCommit: true,
   gitmoji: false,
   maxSuggestions: 3,
+  claudeModel: 'claude-sonnet-4-20250514',
+  openaiModel: 'gpt-4o-mini',
+  timeout: 30000,
 };
 
 export function loadConfig() {
@@ -54,23 +57,25 @@ export async function runConfigWizard() {
     {
       type: 'list',
       name: 'provider',
-      message: 'Select AI provider:',
+      message: 'Default AI provider:',
       choices: ['claude', 'openai'],
       default: current.provider,
     },
     {
       type: 'password',
       name: 'claudeApiKey',
-      message: `Enter Claude API key${current.claudeApiKey ? ` (current: ${maskKey(current.claudeApiKey)})` : ''}:`,
-      when: (ans) => ans.provider === 'claude',
-      validate: (val) => val.length > 0 || 'API key is required',
+      message: current.claudeApiKey
+        ? `Claude API key (current: ${maskKey(current.claudeApiKey)}, press Enter to keep):`
+        : 'Claude API key (press Enter to skip):',
+      when: (ans) => ans.provider === 'claude' || current.claudeApiKey,
     },
     {
       type: 'password',
       name: 'openaiApiKey',
-      message: `Enter OpenAI API key${current.openaiApiKey ? ` (current: ${maskKey(current.openaiApiKey)})` : ''}:`,
-      when: (ans) => ans.provider === 'openai',
-      validate: (val) => val.length > 0 || 'API key is required',
+      message: current.openaiApiKey
+        ? `OpenAI API key (current: ${maskKey(current.openaiApiKey)}, press Enter to keep):`
+        : 'OpenAI API key (press Enter to skip):',
+      when: (ans) => ans.provider === 'openai' || current.openaiApiKey,
     },
     {
       type: 'list',
@@ -95,6 +100,23 @@ export async function runConfigWizard() {
       default: current.gitmoji,
     },
   ]);
+
+  // 빈 값이면 기존 키 유지
+  if (!answers.claudeApiKey && current.claudeApiKey) {
+    answers.claudeApiKey = current.claudeApiKey;
+  }
+  if (!answers.openaiApiKey && current.openaiApiKey) {
+    answers.openaiApiKey = current.openaiApiKey;
+  }
+  // 빈 문자열 키는 저장하지 않음
+  if (!answers.claudeApiKey) delete answers.claudeApiKey;
+  if (!answers.openaiApiKey) delete answers.openaiApiKey;
+
+  // 선택한 provider의 키가 없으면 경고
+  const selectedKey = `${answers.provider}ApiKey`;
+  if (!answers[selectedKey]) {
+    console.log(chalk.yellow(`\n⚠️  No API key set for ${answers.provider}. You'll need to set one before using aicommit.`));
+  }
 
   const newConfig = {
     ...current,
