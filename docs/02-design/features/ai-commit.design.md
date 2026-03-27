@@ -7,8 +7,8 @@
 | **WHY** | 커밋 메시지 작성 비효율 + 품질 불일치 + 한국어/멀티 프로바이더 부재 해결 |
 | **WHO** | git을 사용하는 모든 개발자 |
 | **RISK** | API 키 노출 → 환경변수 우선+chmod 600 / AI 응답 파싱 실패 → JSON 강제+3단계 fallback / diff 토큰 초과 → 프로바이더별 동적 제한+stat summary |
-| **SUCCESS** | npx 즉시 사용, 3개 메시지 제안, 프로바이더 교체 자유, ko/en 지원 |
-| **SCOPE** | v1.0 — 핵심 기능 + plugin system + --lang + config |
+| **SUCCESS** | npx 즉시 사용, 3개 메시지 제안, 프로바이더 교체 자유, ko/en 지원, gitmoji 지원 |
+| **SCOPE** | v1.0 — 핵심 기능 + plugin system + --lang + --gitmoji + configurable model/timeout |
 
 ---
 
@@ -69,14 +69,19 @@ Commander로 명령어 파싱, Inquirer로 사용자 인터랙션 처리.
 // Options:
 //   --provider <name>          → 프로바이더 지정 (claude|openai)
 //   --lang <code>              → 언어 지정 (en|ko)
+//   --gitmoji                  → Gitmoji 접두사 추가
 
 // run() 흐름:
-// 1. loadConfig()
+// 1. isGitRepo() — git repo 아니면 에러
 // 2. getStagedDiff() — 없으면 에러
-// 3. buildPrompt(diff, options)
-// 4. registry.getProvider(name).generateCommitMessages(prompt, options)
-// 5. Inquirer: 선택 / 수정(e) / 재생성(r)
-// 6. execCommit(selectedMessage)
+// 2-1. getStagedFiles() — staged 파일 목록 표시
+// 3. loadConfig()
+// 4. API 키 없으면 → 대화형 config wizard 자동 안내
+// 5. getProvider(name, apiKey, config) — config 전달로 model/timeout 설정
+// 6. truncateDiff() → buildPrompt(diff, options)
+// 7. provider.generateCommitMessages(prompt, options)
+// 8. while loop: Inquirer 선택 / 수정 / 재생성 (재귀 대신 반복문)
+// 9. execCommit(selectedMessage) + undo/amend 힌트 표시
 ```
 
 **Inquirer 인터랙션:**
@@ -116,6 +121,12 @@ export function getStagedDiff() {}
 export function getStagedDiffStat() {}
 
 /**
+ * 스테이징된 파일 목록을 가져온다 (--name-only)
+ * @returns {string} 줄바꿈으로 구분된 파일 경로
+ */
+export function getStagedFiles() {}
+
+/**
  * 커밋을 실행한다
  * @param {string} message - 커밋 메시지
  * @throws {Error} 커밋 실패 시
@@ -134,6 +145,7 @@ export function isGitRepo() {}
 |---|---|
 | git repo 아님 | `❌ Not a git repository` |
 | staged changes 없음 | `❌ No staged changes. Run 'git add' first` |
+| git diff 읽기 실패 | `❌ Failed to read git diff` |
 | commit 실패 | `❌ Commit failed: {error}` |
 
 ### 3.3 `src/core/prompt.js` — Prompt Template
@@ -145,44 +157,42 @@ export function isGitRepo() {}
  * @param {object} options
  * @param {string} options.language - "en" | "ko"
  * @param {boolean} options.conventionalCommit - true/false
+ * @param {boolean} options.gitmoji - gitmoji 접두사 사용 여부
  * @param {number} options.maxSuggestions - 제안 수 (default: 3)
  * @returns {string} 완성된 프롬프트
  */
 export function buildPrompt(diff, options) {}
+
+/**
+ * diff가 maxLength를 초과하면 stat + partial diff로 truncate
+ * @param {string} diff - 원본 diff
+ * @param {number} maxLength - 프로바이더별 최대 길이
+ * @returns {{ diff: string, truncated: boolean }}
+ */
+export function truncateDiff(diff, maxLength) {}
 ```
 
-**프롬프트 구조:**
+**프롬프트 포맷 분기 (4가지 모드):**
 
-```
-You are a git commit message generator.
-Analyze the following git diff and generate {maxSuggestions} commit messages.
+| gitmoji | conventionalCommit | 포맷 |
+|---|---|---|
+| true | true | `<emoji> <type>(<scope>): <description>` |
+| true | false | `<emoji> <description>` |
+| false | true | `<type>(<scope>): <description>` |
+| false | false | 자유 형식 |
 
-Rules:
-- Follow Conventional Commits format: <type>(<scope>): <description>
-- Types: feat, fix, refactor, docs, style, test, chore, perf, ci, build
-- Language: {language}
-- Keep messages concise (max 72 chars for subject line)
-- Focus on WHAT changed and WHY
-
-Git Diff:
-```
-{diff}
-```
-
-Respond ONLY with a JSON array of strings. Example:
-["feat(auth): add login endpoint", "feat: implement auth flow", "feat(auth): add JWT support"]
-
-No explanation, no markdown, just the JSON array.
-```
+**Gitmoji 매핑:**
+`✨=feat, 🐛=fix, ♻️=refactor, 📝=docs, 💄=style, ✅=test, 🔧=chore, ⚡=perf, 👷=ci, 📦=build, 🔥=remove, 🚀=deploy, 🔒=security, ⬆️=upgrade, 🎨=format`
 
 **diff 크기 제한:** 프로바이더별 `maxDiffLength`에 따라 동적 제한.
-- 초과 시: `git diff --staged --stat` summary를 우선 포함 + 나머지 diff를 앞에서부터 잘라서 포함
+- `truncateDiff()` 함수가 별도 export로 처리
+- 초과 시: `[Diff Stats]` + stat summary + `[Partial Diff]` + 앞에서부터 잘린 diff
 - `⚠️ Diff truncated` 경고 표시
 
-**응답 파싱 전략 (3단계 fallback):**
-1. JSON 배열 파싱: 프롬프트에서 `Respond in JSON array: ["msg1", "msg2", "msg3"]` 강제 → `JSON.parse(response)`
-2. 줄바꿈 분리 fallback: `response.split('\n')` → 빈 줄/번호/불릿 제거 → 배열
-3. 재시도 1회: 위 두 방법 모두 실패 시 API 재호출
+**응답 파싱 전략 (3단계 fallback, `parse.js`):**
+1. JSON 배열 파싱: 정규식으로 `[...]` 추출 → `JSON.parse()`
+2. 줄바꿈 분리 fallback: `split('\n')` → 번호/불릿 제거 → 100자 이하 필터
+3. 실패 시 null 반환: caller가 1회 재시도
 
 ### 3.4 `src/core/config.js` — Configuration
 
@@ -196,7 +206,11 @@ No explanation, no markdown, just the JSON array.
  * @property {string} [openaiApiKey]
  * @property {string} language - "en" | "ko"
  * @property {boolean} conventionalCommit
+ * @property {boolean} gitmoji - gitmoji 접두사 사용
  * @property {number} maxSuggestions
+ * @property {string} claudeModel - Claude 모델명 (default: claude-sonnet-4-20250514)
+ * @property {string} openaiModel - OpenAI 모델명 (default: gpt-4o-mini)
+ * @property {number} timeout - API 요청 타임아웃 ms (default: 30000)
  */
 
 /** 설정 파일 로드 (없으면 default 반환) */
@@ -216,19 +230,29 @@ export async function runConfigWizard() {}
   "provider": "claude",
   "language": "en",
   "conventionalCommit": true,
-  "maxSuggestions": 3
+  "gitmoji": false,
+  "maxSuggestions": 3,
+  "claudeModel": "claude-sonnet-4-20250514",
+  "openaiModel": "gpt-4o-mini",
+  "timeout": 30000
 }
 ```
 
 **Config Wizard 흐름:**
 
 ```
-? Select AI provider: (claude / openai)
-? Enter Claude API key: sk-ant-***
+? Default AI provider: (claude / openai)
+? Claude API key (press Enter to skip): sk-ant-***
+? OpenAI API key (press Enter to skip): (enter to skip or keep)
 ? Default language: (en / ko)
 ? Use Conventional Commits: (Y/n)
+? Use Gitmoji? (✨ 🐛 ♻️ ...): (y/N)
 ✅ Config saved to ~/.ai-commit.json
 ```
+
+- 선택한 provider의 키 + 기존에 설정된 다른 provider 키도 표시
+- 기존 키가 있으면 Enter로 유지 가능 (마스킹 표시)
+- 선택한 provider에 키가 없으면 경고 메시지 표시
 
 ### 3.5 `src/providers/AIProvider.js` — Interface (Base Class)
 
@@ -274,8 +298,8 @@ const providers = new Map();
 /** 프로바이더 클래스 등록 */
 export function registerProvider(name, ProviderClass) {}
 
-/** 이름으로 프로바이더 인스턴스 생성 */
-export function getProvider(name, apiKey) {}
+/** 이름으로 프로바이더 인스턴스 생성 (config로 model/timeout 전달) */
+export function getProvider(name, apiKey, config = {}) {}
 
 /** 등록된 프로바이더 목록 반환 */
 export function getAvailableProviders() {}
@@ -293,7 +317,7 @@ registerBuiltInProviders();
 // → registerProvider('openai', OpenAIProvider)
 
 // 사용 시
-const provider = getProvider('claude', apiKey);
+const provider = getProvider('claude', apiKey, config);
 const messages = await provider.generateCommitMessages(prompt, options);
 ```
 
@@ -303,15 +327,19 @@ const messages = await provider.generateCommitMessages(prompt, options);
 import { AIProvider } from './AIProvider.js';
 
 export class ClaudeProvider extends AIProvider {
-  constructor(apiKey) {
+  constructor(apiKey, config = {}) {
     super('claude', apiKey, 15000);  // Claude: ~15,000자
+    this.model = config.claudeModel || 'claude-sonnet-4-20250514';
+    this.timeout = config.timeout || 30000;
   }
 
   async generateCommitMessages(prompt, options) {
+    // AbortController로 timeout 적용
     // POST https://api.anthropic.com/v1/messages
     // Headers: x-api-key, anthropic-version: 2023-06-01
-    // Body: { model: "claude-sonnet-4-20250514", max_tokens: 1024, messages: [...] }
-    // Parse response → string[]
+    // Body: { model: this.model, max_tokens: 1024, messages: [...] }
+    // signal: controller.signal
+    // Parse response → parseAIResponse() → string[]
   }
 }
 ```
@@ -322,15 +350,19 @@ export class ClaudeProvider extends AIProvider {
 import { AIProvider } from './AIProvider.js';
 
 export class OpenAIProvider extends AIProvider {
-  constructor(apiKey) {
+  constructor(apiKey, config = {}) {
     super('openai', apiKey, 12000);  // OpenAI gpt-4o-mini: ~12,000자
+    this.model = config.openaiModel || 'gpt-4o-mini';
+    this.timeout = config.timeout || 30000;
   }
 
   async generateCommitMessages(prompt, options) {
+    // AbortController로 timeout 적용
     // POST https://api.openai.com/v1/chat/completions
     // Headers: Authorization: Bearer {apiKey}
-    // Body: { model: "gpt-4o-mini", messages: [...] }
-    // Parse response → string[]
+    // Body: { model: this.model, messages: [...] }
+    // signal: controller.signal
+    // Parse response → parseAIResponse() → string[]
   }
 }
 ```
@@ -389,12 +421,14 @@ User                CLI              Core             Provider
 |---|---|---|---|
 | Not a git repo | `isGitRepo()` false | `❌ Not a git repository` | Exit with code 1 |
 | No staged changes | `getStagedDiff()` empty | `❌ No staged changes. Run 'git add' first` | Exit with code 1 |
-| No API key | config에 key 없음 | `❌ API key not configured. Run 'ai-commit config'` | Exit with code 1 |
+| No API key | config에 key 없음 | `⚠️ API key not configured for {provider}.` | 대화형 wizard 자동 안내 ("Run setup now?") |
+| git diff 읽기 실패 | execSync throws | `❌ Failed to read git diff` | Exit with code 1 |
 | Unknown provider | registry에 없음 | `❌ Unknown provider: {name}. Available: claude, openai` | Exit with code 1 |
 | API error (401) | HTTP 401 | `❌ Invalid API key for {provider}` | Suggest `ai-commit config` |
 | API error (429) | HTTP 429 | `❌ Rate limited. Please try again later` | Exit with code 1 |
-| API error (500+) | HTTP 5xx | `❌ {provider} API error. Please try again` | Exit with code 1 |
+| API error (500+) | HTTP 5xx | `❌ {provider} API error ({status}). Please try again` | Exit with code 1 |
 | Network error | fetch throws | `❌ Network error. Check your connection` | Exit with code 1 |
+| Request timeout | AbortController abort | `❌ Network error. Check your connection` | 30초 타임아웃, Exit with code 1 |
 | Diff too large | diff > provider.maxDiffLength | `⚠️ Diff truncated (too large for AI context)` | stat summary 우선 포함 + truncate |
 | Parse failure (1차) | JSON.parse 실패 | — | 줄바꿈 분리 fallback 시도 |
 | Parse failure (2차) | 줄바꿈 분리도 실패 | — | API 재호출 1회 |
@@ -406,12 +440,12 @@ User                CLI              Core             Provider
 
 ```json
 {
-  "name": "ai-commit",
+  "name": "aicommit",
   "version": "1.0.0",
   "description": "AI-powered git commit message generator CLI",
   "type": "module",
   "bin": {
-    "ai-commit": "./bin/ai-commit.js"
+    "aicommit": "./bin/ai-commit.js"
   },
   "files": [
     "bin/",
