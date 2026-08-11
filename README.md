@@ -143,9 +143,15 @@ aicommit config               # Interactive setup (API keys, preferences)
 |--------|-------------|---------|
 | `--provider <name>` | AI provider (`claude` or `openai`) | `claude` |
 | `--lang <code>` | Commit message language (`en` or `ko`) | `en` |
-| `--gitmoji` | Add gitmoji emoji prefixes | `false` |
+| `--gitmoji` | Add gitmoji emoji prefixes | config value |
+| `--no-gitmoji` | Disable gitmoji even if enabled in config | config value |
+| `-y, --yes` | Commit the first suggestion without prompting | `false` |
 | `-V, --version` | Show version number | — |
 | `-h, --help` | Show help | — |
+
+`--gitmoji` and `--no-gitmoji` both override the config file; omit them to use whatever the config says.
+
+`--yes` is implied when stdin or stdout is not a TTY, so the CLI works in scripts and git hooks instead of crashing on an unanswerable prompt.
 
 ### Commit Message Formats
 
@@ -317,14 +323,17 @@ git diff --staged
 
 ### Detailed Flow
 
-1. **Check environment** — Verify git repo, read staged diff, show staged file list
-2. **Load config** — Merge defaults < config file < env vars < CLI options
-3. **Auto setup** — If API key missing, prompt to run config wizard immediately
-4. **Truncate diff** — If diff exceeds provider's limit, include stat summary + partial diff
-5. **Build prompt** — Combine diff with language, format (conventional/gitmoji), and suggestion count
-6. **Call AI** — Send to provider with 30s timeout. On parse failure, auto-retry once
-7. **Interactive selection** — Choose a message, edit it, or regenerate (loop until commit or cancel)
-8. **Commit** — Run `git commit -m "message"` and show undo commands
+1. **Check the repo** — Verify this is a git repository
+2. **Load config and validate options** — Merge defaults < config file < env vars < CLI options, then reject an unknown `--provider` or `--lang` before doing any work
+3. **Read staged changes** — Read the staged diff and show the file list
+4. **Resolve the API key** — If it's missing, prompt to run the config wizard; in a non-interactive terminal, exit with instructions instead
+5. **Truncate diff** — If diff exceeds provider's limit, include stat summary + partial diff
+6. **Build prompt** — Combine diff with language, format (conventional/gitmoji), and suggestion count
+7. **Call AI** — Send to provider with 30s timeout. On parse failure, auto-retry once
+8. **Select a message** — Choose, edit, or regenerate in a loop. With `--yes` or without a TTY, the first suggestion is taken
+9. **Commit** — Run git directly (no shell), then show undo commands
+
+Option validation runs at step 2 so that a typo like `--provider gemini` fails immediately rather than after reading the diff and prompting for a key that could never exist.
 
 ### Error Handling
 
@@ -332,8 +341,11 @@ git diff --staged
 |-------|---------|----------|
 | Not a git repo | `Not a git repository` | Exit |
 | No staged changes | `No staged changes. Run 'git add' first` | Exit |
-| No API key | `API key not configured for {provider}` | Auto-prompt config wizard |
+| No API key (interactive) | `API key not configured for {provider}` | Auto-prompt config wizard |
+| No API key (no TTY) | `API key not configured` + how to set the env var | Exit |
 | Unknown provider | `Unknown provider: {name}. Available: claude, openai` | Exit |
+| Unknown language | `Unknown language: {code}. Available: en, ko` | Exit |
+| Wizard produced no key | `Still no API key for {provider}. Aborting` | Exit (avoids a retry loop) |
 | Invalid API key (401) | `Invalid API key for {provider}` | Suggest `aicommit config` |
 | Rate limited (429) | `Rate limited. Please try again later` | Exit |
 | Server error (5xx) | `{provider} API error ({status})` | Exit |
@@ -344,10 +356,12 @@ git diff --staged
 ### Security
 
 - **API keys** are stored in `~/.ai-commit.json` with `chmod 600` (owner-only read/write)
-- **Environment variables** (`AI_COMMIT_CLAUDE_KEY`, `AI_COMMIT_OPENAI_KEY`) take priority over config file
+- **Environment variables** (`AI_COMMIT_CLAUDE_KEY`, `AI_COMMIT_OPENAI_KEY`) take priority over the config file, and are **never written to it** — the setup wizard reads the file directly so an env-only key can't get persisted to disk
+- **No shell for commits** — The message is passed to git as an argument, never interpolated into a shell command, so `$(...)` and backticks in a message are not evaluated
 - **Key masking** — Existing keys shown as `sk-ant-***...***` in config wizard
-- **Diff privacy** — Staged diff is sent only to the selected AI provider's API
 - **Home directory storage** — Config file lives in `~/`, never tracked by git
+
+⚠️ **The staged diff is sent to the AI provider in full.** It goes only to the provider you selected, but that includes anything you staged — if you `git add` a `.env` file or a key, its contents leave your machine. Check `git diff --staged` before running the tool on changes you haven't reviewed.
 
 ## Project Structure
 

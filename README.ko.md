@@ -143,9 +143,15 @@ aicommit config               # 대화형 설정 (API 키, 기본 설정)
 |------|------|--------|
 | `--provider <name>` | AI 프로바이더 (`claude` 또는 `openai`) | `claude` |
 | `--lang <code>` | 커밋 메시지 언어 (`en` 또는 `ko`) | `en` |
-| `--gitmoji` | Gitmoji 이모지 접두사 추가 | `false` |
+| `--gitmoji` | Gitmoji 이모지 접두사 추가 | 설정 파일 값 |
+| `--no-gitmoji` | 설정에서 켜져 있어도 gitmoji 비활성화 | 설정 파일 값 |
+| `-y, --yes` | 첫 제안을 프롬프트 없이 바로 커밋 | `false` |
 | `-V, --version` | 버전 표시 | — |
 | `-h, --help` | 도움말 표시 | — |
+
+`--gitmoji`와 `--no-gitmoji`는 둘 다 설정 파일을 덮어씁니다. 생략하면 설정 파일 값을 따릅니다.
+
+stdin이나 stdout이 TTY가 아니면 `--yes`가 자동 적용됩니다. 덕분에 스크립트나 git 훅에서 답할 수 없는 프롬프트에 걸려 죽지 않습니다.
 
 ### 커밋 메시지 포맷
 
@@ -317,14 +323,17 @@ git diff --staged
 
 ### 상세 흐름
 
-1. **환경 확인** — git repo 확인, staged diff 읽기, staged 파일 목록 표시
-2. **설정 로드** — 기본값 < 설정 파일 < 환경 변수 < CLI 옵션 순으로 머지
-3. **자동 설정** — API 키 없으면 config wizard 즉시 안내
-4. **Diff 축소** — 프로바이더 제한 초과 시 stat summary + 부분 diff로 자동 축소
-5. **프롬프트 생성** — diff + 언어 + 포맷(conventional/gitmoji) + 제안 수 조합
-6. **AI 호출** — 30초 타임아웃으로 전송. 파싱 실패 시 1회 자동 재시도
-7. **대화형 선택** — 메시지 선택, 수정, 또는 재생성 (커밋 또는 취소까지 반복)
-8. **커밋** — `git commit -m "message"` 실행 후 undo 명령어 안내
+1. **저장소 확인** — git repo인지 확인
+2. **설정 로드 + 옵션 검증** — 기본값 < 설정 파일 < 환경 변수 < CLI 옵션 순으로 머지한 뒤, 잘못된 `--provider`·`--lang`을 작업 시작 전에 거부
+3. **staged 변경 읽기** — staged diff를 읽고 파일 목록 표시
+4. **API 키 확인** — 없으면 config wizard 안내. 비대화형 터미널에서는 대신 방법을 알려주고 종료
+5. **Diff 축소** — 프로바이더 제한 초과 시 stat summary + 부분 diff로 자동 축소
+6. **프롬프트 생성** — diff + 언어 + 포맷(conventional/gitmoji) + 제안 수 조합
+7. **AI 호출** — 30초 타임아웃으로 전송. 파싱 실패 시 1회 자동 재시도
+8. **메시지 선택** — 선택·수정·재생성 반복. `--yes`이거나 TTY가 아니면 첫 제안을 채택
+9. **커밋** — 셸을 거치지 않고 git을 직접 실행한 뒤 undo 명령어 안내
+
+옵션 검증을 2단계에 둔 이유는, `--provider gemini` 같은 오타가 diff를 다 읽고 존재할 수 없는 키를 물어본 다음이 아니라 **즉시** 실패하도록 하기 위해서입니다.
 
 ### 에러 처리
 
@@ -332,8 +341,11 @@ git diff --staged
 |------|--------|------|
 | git repo 아님 | `Not a git repository` | 종료 |
 | staged changes 없음 | `No staged changes. Run 'git add' first` | 종료 |
-| API 키 없음 | `API key not configured for {provider}` | config wizard 자동 안내 |
+| API 키 없음 (대화형) | `API key not configured for {provider}` | config wizard 자동 안내 |
+| API 키 없음 (TTY 아님) | `API key not configured` + 환경 변수 설정 방법 | 종료 |
 | 미지원 프로바이더 | `Unknown provider: {name}. Available: claude, openai` | 종료 |
+| 미지원 언어 | `Unknown language: {code}. Available: en, ko` | 종료 |
+| 마법사가 키 없이 종료 | `Still no API key for {provider}. Aborting` | 종료 (재귀 루프 방지) |
 | 잘못된 API 키 (401) | `Invalid API key for {provider}` | `aicommit config` 안내 |
 | 요청 제한 (429) | `Rate limited. Please try again later` | 종료 |
 | 서버 에러 (5xx) | `{provider} API error ({status})` | 종료 |
@@ -344,10 +356,12 @@ git diff --staged
 ### 보안
 
 - **API 키**는 `~/.ai-commit.json`에 `chmod 600` (소유자만 읽기/쓰기)으로 저장
-- **환경 변수** (`AI_COMMIT_CLAUDE_KEY`, `AI_COMMIT_OPENAI_KEY`)가 설정 파일보다 우선
+- **환경 변수** (`AI_COMMIT_CLAUDE_KEY`, `AI_COMMIT_OPENAI_KEY`)가 설정 파일보다 우선하며, **설정 파일에 기록되지 않음** — 마법사가 파일 설정을 직접 읽으므로 환경 변수로만 준 키가 디스크에 남지 않습니다
+- **커밋 시 셸 미경유** — 메시지를 git에 인자로 직접 전달하므로, 메시지 안의 `$(...)`나 백틱이 평가되지 않습니다
 - **키 마스킹** — config wizard에서 기존 키를 `sk-ant-***...***` 형태로 마스킹 표시
-- **Diff 프라이버시** — staged diff는 선택한 AI 프로바이더 API에만 전송
 - **홈 디렉토리 저장** — 설정 파일은 `~/`에 위치, git 추적 대상 아님
+
+⚠️ **staged diff는 전문이 AI 프로바이더로 전송됩니다.** 선택한 프로바이더에만 가지만, **staged된 것은 전부 포함**됩니다 — `.env`나 키 파일을 `git add` 했다면 그 내용도 기기를 떠납니다. 검토하지 않은 변경에 이 도구를 쓰기 전에 `git diff --staged`를 확인하세요.
 
 ## 프로젝트 구조
 

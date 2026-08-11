@@ -137,13 +137,13 @@ async function run(opts) {
   // 5. provider 인스턴스 생성
   const provider = getProvider(providerName, apiKey, config);
 
-  // 5. diff truncate
+  // 6. diff truncate
   const { diff: processedDiff, truncated } = truncateDiff(diff, provider.maxDiffLength);
   if (truncated) {
     console.log(chalk.yellow('⚠️  Diff truncated (too large for AI context)'));
   }
 
-  // 6. 프롬프트 생성 + AI 호출
+  // 7. 프롬프트 생성 + AI 호출
   const options = {
     language,
     conventionalCommit: config.conventionalCommit,
@@ -183,21 +183,20 @@ async function generateAndSelect(provider, diff, options, autoAccept) {
   }
 }
 
-async function callAI(provider, diff, options, isRetry = false) {
+async function callAI(provider, diff, options) {
   const spinner = ora('Analyzing staged changes...').start();
 
   try {
     const prompt = buildPrompt(diff, options);
     const messages = await provider.generateCommitMessages(prompt, options);
 
+    // 파싱 실패는 모델이 형식을 어긴 경우라 한 번은 다시 물어볼 가치가 있다.
     if (!messages) {
-      if (!isRetry) {
-        spinner.text = 'Retrying...';
-        const retryMessages = await provider.generateCommitMessages(prompt, options);
-        if (retryMessages) {
-          spinner.succeed('Analysis complete');
-          return retryMessages;
-        }
+      spinner.text = 'Retrying...';
+      const retryMessages = await provider.generateCommitMessages(prompt, options);
+      if (retryMessages) {
+        spinner.succeed('Analysis complete');
+        return retryMessages;
       }
       spinner.fail('Failed to parse AI response after retry');
       process.exit(1);
