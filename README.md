@@ -10,6 +10,8 @@ Analyzes your staged changes and suggests [Conventional Commit](https://www.conv
 
 ## Status
 
+**Archived and no longer maintained** — kept public as a record of the work and the reasoning below.
+
 I built this for myself in March 2026 and used it for a while. It works — it is tested and CI runs on Linux and Windows across Node 20, 22, and 24.
 
 I no longer use it, and the reason is worth writing down.
@@ -24,7 +26,7 @@ That is a structural disadvantage, not a quality gap, so no amount of prompt tun
 
 **Where it still fits:** code you wrote by hand, environments where you can't or don't run a coding agent, and cleaning up commit messages after the fact.
 
-**What I'd keep from it:** the provider abstraction ([Adding a Provider](#adding-a-provider)) held up well — adding a third provider is one file and one line. The parsing fallback chain and the config precedence rules are the parts I'd carry into another project.
+**What held up, and what didn't:** the provider abstraction ([Adding a Provider](#adding-a-provider)) did its job at the call layer — a new provider is one self-contained file plus one line in the registry. It stops at the config layer: the setup wizard hardcodes both provider names and their key fields, so a third provider means editing that too. Splitting those two concerns is the thing I'd do differently. The parsing fallback chain and the config precedence rules are the parts I'd carry into another project as-is.
 
 ## Quick Start
 
@@ -368,18 +370,18 @@ Option validation runs at step 2 so that a typo like `--provider gemini` fails i
 ```
 ai-commit/
 ├── bin/
-│   └── ai-commit.js              # CLI entrypoint + interaction (211 lines)
+│   └── ai-commit.js              # CLI entrypoint + interaction (279 lines)
 ├── src/
 │   ├── core/
-│   │   ├── config.js              # Config load/save/wizard (128 lines)
-│   │   ├── git.js                 # Git operations (29 lines)
+│   │   ├── config.js              # Config load/save/wizard (151 lines)
+│   │   ├── git.js                 # Git operations (38 lines)
 │   │   └── prompt.js              # Prompt builder + diff truncate (62 lines)
 │   └── providers/
 │       ├── AIProvider.js          # Abstract base class (14 lines)
 │       ├── registry.js            # Provider registry (26 lines)
-│       ├── parse.js               # AI response parser, 3-stage fallback (33 lines)
-│       ├── claude.js              # Claude API implementation (49 lines)
-│       └── openai.js              # OpenAI API implementation (48 lines)
+│       ├── parse.js               # AI response parser, 3-stage fallback (61 lines)
+│       ├── claude.js              # Claude API implementation (59 lines)
+│       └── openai.js              # OpenAI API implementation (59 lines)
 ├── test/
 │   ├── parse.test.js              # Response parsing
 │   ├── providers.test.js          # Provider contracts + error paths
@@ -392,7 +394,7 @@ ai-commit/
 └── .gitignore
 ```
 
-**Total: ~750 lines** across 9 source files, plus ~240 lines of tests. 4 runtime dependencies.
+**Total: ~749 lines** across 9 source files, plus ~239 lines of tests. 4 runtime dependencies.
 
 ## Testing
 
