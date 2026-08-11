@@ -186,7 +186,7 @@ aicommit config
   "conventionalCommit": true,
   "gitmoji": false,
   "maxSuggestions": 3,
-  "claudeModel": "claude-sonnet-4-20250514",
+  "claudeModel": "claude-sonnet-5",
   "openaiModel": "gpt-4o-mini",
   "timeout": 30000
 }
@@ -201,7 +201,7 @@ aicommit config
 | `conventionalCommit` | boolean | `true` | Conventional Commits 포맷 사용 |
 | `gitmoji` | boolean | `false` | Gitmoji 접두사 추가 |
 | `maxSuggestions` | number | `3` | 생성할 제안 수 |
-| `claudeModel` | string | `"claude-sonnet-4-20250514"` | 사용할 Claude 모델 |
+| `claudeModel` | string | `"claude-sonnet-5"` | 사용할 Claude 모델 |
 | `openaiModel` | string | `"gpt-4o-mini"` | 사용할 OpenAI 모델 |
 | `timeout` | number | `30000` | API 요청 타임아웃 (밀리초) |
 
@@ -232,7 +232,7 @@ CLI 옵션 (--provider, --lang, --gitmoji)
 
 | 프로바이더 | 기본 모델 | 최대 Diff | API |
 |----------|-----------|----------|-----|
-| Claude | claude-sonnet-4-20250514 | ~15,000자 | [Anthropic Messages API](https://docs.anthropic.com/en/docs/about-claude/models) |
+| Claude | claude-sonnet-5 | ~15,000자 | [Anthropic Messages API](https://docs.anthropic.com/en/docs/about-claude/models) |
 | OpenAI | gpt-4o-mini | ~12,000자 | [OpenAI Chat Completions](https://platform.openai.com/docs/models) |
 
 모델은 `~/.ai-commit.json`의 `claudeModel`, `openaiModel`로 코드 수정 없이 변경 가능합니다.
