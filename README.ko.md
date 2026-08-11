@@ -1,14 +1,34 @@
 # aicommit
 
+[![CI](https://github.com/solzip/ai-commit/actions/workflows/ci.yml/badge.svg)](https://github.com/solzip/ai-commit/actions/workflows/ci.yml)
+
+[English](./README.md)
+
 AI 기반 git 커밋 메시지 자동 생성 CLI 도구.
 
 스테이징된 변경사항을 분석하여 [Conventional Commit](https://www.conventionalcommits.org/) 메시지를 Claude 또는 OpenAI로 생성합니다. [Gitmoji](https://gitmoji.dev/), 다국어, 대화형 선택을 지원합니다.
 
+## 현재 상태
+
+2026년 3월에 직접 쓰려고 만들었고, 한동안 실제로 썼습니다. 지금도 동작합니다 — 테스트가 있고 CI가 Linux/Windows에서 Node 20·22·24로 돌아갑니다.
+
+지금은 쓰지 않는데, 그 이유가 기록해둘 만합니다.
+
+제 작업 방식이 에이전트 중심으로 옮겨갔습니다. 에이전트가 코드를 짜면 커밋 메시지도 같이 쓰는데, 그게 이 도구보다 낫습니다. 모델이 더 좋아서가 아니라 **가진 정보가 다르기 때문**입니다.
+
+> **aicommit은 diff를 읽고 의도를 추측합니다. 코드를 짠 에이전트는 의도를 이미 알고 있습니다.**
+
+커밋 메시지의 가치는 대부분 *왜*에 있는데, 그 *왜*는 diff에 남지 않습니다. `feat:` / `fix:` / `refactor:` 구분조차 변경분만으로는 복원되지 않을 때가 많습니다 — 같은 수정이 무엇을 하려던 것이었느냐에 따라 셋 다 될 수 있으니까요. 작업의 하류에 선 도구는, 상류의 작성자가 애초에 추측할 필요조차 없던 것을 추측하고 있는 셈입니다.
+
+이건 품질 격차가 아니라 **구조적 열세**라서, 프롬프트를 아무리 다듬어도 좁혀지지 않습니다. 이 분야가 계속 작았던 이유이기도 합니다 — 가장 많이 쓰이는 도구가 주간 6천 다운로드 수준인데, 그게 얹히는 git 훅 인프라(husky, lint-staged)는 수천만입니다.
+
+**그래도 맞는 자리:** 손으로 직접 짠 코드, 코딩 에이전트를 쓸 수 없거나 쓰지 않는 환경, 그리고 지난 커밋 메시지를 정리할 때.
+
+**남길 만한 것:** 프로바이더 추상화([프로바이더 추가](#프로바이더-추가))는 잘 버텼습니다 — 세 번째 프로바이더를 붙이는 데 파일 하나와 한 줄이면 됩니다. 파싱 fallback 체인과 설정 우선순위 규칙도 다른 프로젝트로 가져갈 만한 부분입니다.
+
 ## 빠른 시작
 
-이 저장소를 클론할 필요 없습니다. **본인의 git 프로젝트**에서 바로 실행하세요:
-
-> ⚠️ **아직 npm에 발행되지 않았습니다.** 첫 릴리스 전까지는 소스에서 설치해 주세요.
+> 소스에서 설치합니다 — npm에 발행되어 있지 않습니다.
 
 ```bash
 # 1. 소스에서 설치
@@ -83,7 +103,7 @@ Staged files:
 
 ## 설치
 
-아직 npm에 발행되지 않았습니다 — 소스에서 설치합니다:
+npm에 발행되어 있지 않습니다 — 소스에서 설치합니다:
 
 ```bash
 git clone https://github.com/solzip/ai-commit.git
@@ -94,7 +114,7 @@ npm link              # `aicommit` 명령을 전역에서 사용 가능하게 �
 
 제거할 때: `npm unlink -g aicommit`
 
-**요구사항:** Node.js >= 18
+**요구사항:** Node.js >= 20
 
 ### 기여자용
 
@@ -349,20 +369,46 @@ ai-commit/
 ├── package.json
 ├── README.md
 ├── README.ko.md
+├── test/
+│   ├── parse.test.js              # 응답 파싱
+│   ├── providers.test.js          # 프로바이더 계약 + 오류 경로
+│   └── safety.test.js             # 셸 안전성, 대용량 diff, 키 격리
+├── .github/workflows/ci.yml
 └── .gitignore
 ```
 
-**총 ~600줄**, 소스 파일 9개, 의존성 4개.
+**총 ~750줄**, 소스 파일 9개, 테스트 약 240줄. 런타임 의존성 4개.
+
+## 테스트
+
+```bash
+npm test
+```
+
+24개 테스트, 테스트 프레임워크 없이 내장 `node --test`만 씁니다. CI가 Ubuntu·Windows에서 Node 20·22·24로 돌립니다.
+
+커버리지를 채우기보다, **실제로 물렸던 실패 지점**에 의도적으로 무게를 뒀습니다.
+
+| 테스트 | 막아둔 회귀 |
+|--------|------------|
+| 커밋 메시지가 셸에서 평가되지 않음 | `execSync` + JSON 이스케이프가 POSIX 셸에서 `$(...)`를 실행시켰음 |
+| 1MB 초과 staged diff를 읽음 | 기본 `maxBuffer` 1MB가 lockfile 재생성 하나에 터졌음 |
+| 환경변수 키가 디스크에 안 남음 | 설정 마법사가 환경변수 전용 키를 설정 파일에 되썼음 |
+| 서문이 제안 목록에 안 들어감 | `Here are 3 commit messages:` 가 1번 제안이 됐음 |
+| 빈/필터링된 API 응답 처리 | 무방비 `content[0].text` 가 정체불명 `TypeError`를 냈음 |
+
+이 테스트들은 **실제 효과를 검증**합니다 — 셸 테스트는 임시 저장소에 페이로드를 커밋한 뒤 파일 시스템을 확인하고, diff 테스트는 실제로 1MB 넘는 diff를 만들어 돌립니다.
 
 ## 기술 스택
 
 | 카테고리 | 선택 | 이유 |
 |---------|------|------|
-| 런타임 | Node.js >= 18 (ESM) | 네이티브 `fetch`, 넓은 사용자 기반, `npx` 배포 |
+| 런타임 | Node.js >= 20 (ESM) | 네이티브 `fetch`, 빌드 단계 없음 |
 | CLI | [Commander](https://www.npmjs.com/package/commander) v12 | 경량, 표준 CLI 파싱 |
-| 인터랙션 | [Inquirer](https://www.npmjs.com/package/inquirer) v9 | 풍부한 대화형 프롬프트 (list, password, confirm) |
+| 인터랙션 | [Inquirer](https://www.npmjs.com/package/inquirer) v9 | 풍부한 대화형 프롬프트 (select, password, confirm) |
 | 스타일링 | [chalk](https://www.npmjs.com/package/chalk) v5 + [ora](https://www.npmjs.com/package/ora) v8 | 터미널 색상 + 스피너 |
 | AI API | 네이티브 `fetch` (SDK 없음) | 추가 의존성 제로, 프로바이더 간 일관된 패턴 |
+| 테스트 | `node --test` (내장) | 테스트 프레임워크 의존성 없음 |
 
 ## 라이선스
 

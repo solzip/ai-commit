@@ -1,14 +1,34 @@
 # aicommit
 
+[![CI](https://github.com/solzip/ai-commit/actions/workflows/ci.yml/badge.svg)](https://github.com/solzip/ai-commit/actions/workflows/ci.yml)
+
 [한국어](./README.ko.md)
 
 AI-powered git commit message generator CLI.
 
 Analyzes your staged changes and suggests [Conventional Commit](https://www.conventionalcommits.org/) messages using Claude or OpenAI. Supports [Gitmoji](https://gitmoji.dev/), multiple languages, and interactive selection.
 
+## Status
+
+I built this for myself in March 2026 and used it for a while. It works — it is tested and CI runs on Linux and Windows across Node 20, 22, and 24.
+
+I no longer use it, and the reason is worth writing down.
+
+My own workflow moved to agent-driven development. When an agent writes the code, it also writes the commit message, and it writes a better one than this tool can — not because the model is better, but because of an asymmetry in what each side knows:
+
+> **aicommit reads the diff and infers intent. The agent that wrote the code already knows the intent.**
+
+Most of a commit message's value is in the *why*, and the *why* is not in the diff. Even the `feat:` / `fix:` / `refactor:` distinction often can't be recovered from the change alone — the same edit is any of the three depending on what you were trying to do. A tool positioned downstream of the work is guessing at something the upstream author never had to guess at.
+
+That is a structural disadvantage, not a quality gap, so no amount of prompt tuning closes it. It is also why this category stayed small: the most-used tool in the space sees roughly 6K weekly downloads, while the git-hook plumbing it sits on (husky, lint-staged) sees tens of millions.
+
+**Where it still fits:** code you wrote by hand, environments where you can't or don't run a coding agent, and cleaning up commit messages after the fact.
+
+**What I'd keep from it:** the provider abstraction ([Adding a Provider](#adding-a-provider)) held up well — adding a third provider is one file and one line. The parsing fallback chain and the config precedence rules are the parts I'd carry into another project.
+
 ## Quick Start
 
-> ⚠️ **Not published to npm yet.** Install from source until the first release lands.
+> Installed from source — this is not published to npm.
 
 ```bash
 # 1. Install from source
@@ -83,7 +103,7 @@ With `--gitmoji`:
 
 ## Install
 
-Not published to npm yet — install from source:
+Not published to npm — install from source:
 
 ```bash
 git clone https://github.com/solzip/ai-commit.git
@@ -94,7 +114,7 @@ npm link              # makes `aicommit` available globally
 
 To remove later: `npm unlink -g aicommit`
 
-**Requirements:** Node.js >= 18
+**Requirements:** Node.js >= 20
 
 ### For Contributors
 
@@ -346,23 +366,49 @@ ai-commit/
 │       ├── parse.js               # AI response parser, 3-stage fallback (33 lines)
 │       ├── claude.js              # Claude API implementation (49 lines)
 │       └── openai.js              # OpenAI API implementation (48 lines)
+├── test/
+│   ├── parse.test.js              # Response parsing
+│   ├── providers.test.js          # Provider contracts + error paths
+│   └── safety.test.js             # Shell safety, large diffs, key isolation
+├── .github/workflows/ci.yml
 ├── package.json
 ├── README.md
 ├── README.ko.md
 └── .gitignore
 ```
 
-**Total: ~600 lines** across 9 source files, 4 dependencies.
+**Total: ~750 lines** across 9 source files, plus ~240 lines of tests. 4 runtime dependencies.
+
+## Testing
+
+```bash
+npm test
+```
+
+24 tests, no test framework — just the built-in `node --test`. CI runs them on Ubuntu and Windows across Node 20, 22, and 24.
+
+The suite is deliberately weighted toward the failure modes that actually bit, rather than toward coverage:
+
+| Test | Regression it locks down |
+|------|--------------------------|
+| Commit message is not evaluated by a shell | `execSync` with JSON escaping let `$(...)` run on POSIX shells |
+| Staged diffs over 1MB are read | The 1MB `maxBuffer` default failed on a regenerated lockfile |
+| Env API keys never reach disk | The setup wizard rewrote env-only keys into the config file |
+| Preamble lines are not offered as messages | `Here are 3 commit messages:` became suggestion #1 |
+| Empty and filtered API responses | Unguarded `content[0].text` threw an opaque `TypeError` |
+
+These assert on real effects — the shell test commits a payload into a throwaway repo and checks the filesystem, and the diff test builds an actual 1MB+ diff.
 
 ## Tech Stack
 
 | Category | Choice | Reason |
 |----------|--------|--------|
-| Runtime | Node.js >= 18 (ESM) | Native `fetch`, wide adoption, `npx` distribution |
+| Runtime | Node.js >= 20 (ESM) | Native `fetch`, no build step |
 | CLI | [Commander](https://www.npmjs.com/package/commander) v12 | Lightweight, standard CLI parsing |
-| Interaction | [Inquirer](https://www.npmjs.com/package/inquirer) v9 | Rich interactive prompts (list, password, confirm) |
+| Interaction | [Inquirer](https://www.npmjs.com/package/inquirer) v9 | Rich interactive prompts (select, password, confirm) |
 | Styling | [chalk](https://www.npmjs.com/package/chalk) v5 + [ora](https://www.npmjs.com/package/ora) v8 | Terminal colors + spinner |
 | AI APIs | Native `fetch` (no SDK) | Zero extra dependencies, consistent pattern across providers |
+| Tests | `node --test` (built-in) | No test framework dependency |
 
 ## License
 
