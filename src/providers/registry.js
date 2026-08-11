@@ -7,13 +7,13 @@ export function registerProvider(name, ProviderClass) {
   providers.set(name, ProviderClass);
 }
 
-export function getProvider(name, apiKey) {
+export function getProvider(name, apiKey, config = {}) {
   const ProviderClass = providers.get(name);
   if (!ProviderClass) {
     const available = getAvailableProviders().join(', ');
     throw new Error(`Unknown provider: ${name}. Available: ${available}`);
   }
-  return new ProviderClass(apiKey);
+  return new ProviderClass(apiKey, config);
 }
 
 export function getAvailableProviders() {

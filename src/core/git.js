@@ -1,4 +1,4 @@
-import { execSync } from 'child_process';
+import { execFileSync, execSync } from 'child_process';
 
 export function isGitRepo() {
   try {
@@ -19,6 +19,13 @@ export function getStagedDiffStat() {
   return stat.trim();
 }
 
+export function getStagedFiles() {
+  const files = execSync('git diff --staged --name-only', { encoding: 'utf-8' });
+  return files.trim();
+}
+
 export function execCommit(message) {
-  execSync(`git commit -m ${JSON.stringify(message)}`, { stdio: 'pipe' });
+  // 셸을 거치지 않고 인자를 직접 전달한다.
+  // 셸 경유 시 메시지 안의 $(...), 백틱이 POSIX 셸에서 평가된다.
+  execFileSync('git', ['commit', '-m', message], { stdio: 'pipe' });
 }
