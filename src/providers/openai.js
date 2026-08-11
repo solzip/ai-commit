@@ -42,7 +42,18 @@ export class OpenAIProvider extends AIProvider {
     }
 
     const data = await response.json();
-    const text = data.choices[0].message.content;
+    const choice = data.choices?.[0];
+
+    if (choice?.finish_reason === 'content_filter') {
+      throw new Error('OpenAI blocked this request (content filter)');
+    }
+
+    // content_filter나 도구 호출 응답에서는 content가 null일 수 있다.
+    const text = choice?.message?.content;
+    if (!text) {
+      throw new Error('OpenAI returned an empty response. Please try again');
+    }
+
     return parseAIResponse(text, options.maxSuggestions);
   }
 }

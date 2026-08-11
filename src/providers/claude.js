@@ -4,7 +4,7 @@ import { parseAIResponse } from './parse.js';
 export class ClaudeProvider extends AIProvider {
   constructor(apiKey, config = {}) {
     super('claude', apiKey, 15000);
-    this.model = config.claudeModel || 'claude-sonnet-4-20250514';
+    this.model = config.claudeModel || 'claude-sonnet-5';
     this.timeout = config.timeout || 30000;
   }
 
@@ -43,7 +43,17 @@ export class ClaudeProvider extends AIProvider {
     }
 
     const data = await response.json();
-    const text = data.content[0].text;
+
+    if (data.stop_reason === 'refusal') {
+      throw new Error('Claude declined to generate a message for this diff');
+    }
+
+    // content가 비어 있거나 첫 블록이 text가 아닐 수 있다.
+    const text = data.content?.find((block) => block.type === 'text')?.text;
+    if (!text) {
+      throw new Error('Claude returned an empty response. Please try again');
+    }
+
     return parseAIResponse(text, options.maxSuggestions);
   }
 }

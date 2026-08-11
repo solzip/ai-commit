@@ -12,28 +12,36 @@ const DEFAULT_CONFIG = {
   conventionalCommit: true,
   gitmoji: false,
   maxSuggestions: 3,
-  claudeModel: 'claude-sonnet-4-20250514',
+  claudeModel: 'claude-sonnet-5',
   openaiModel: 'gpt-4o-mini',
   timeout: 30000,
 };
 
-export function loadConfig() {
-  // 환경변수 우선
-  const envOverrides = {};
+function readFileConfig() {
+  try {
+    return JSON.parse(readFileSync(CONFIG_PATH, 'utf-8'));
+  } catch {
+    return {};
+  }
+}
+
+function readEnvKeys() {
+  const keys = {};
   if (process.env.AI_COMMIT_CLAUDE_KEY) {
-    envOverrides.claudeApiKey = process.env.AI_COMMIT_CLAUDE_KEY;
+    keys.claudeApiKey = process.env.AI_COMMIT_CLAUDE_KEY;
   }
   if (process.env.AI_COMMIT_OPENAI_KEY) {
-    envOverrides.openaiApiKey = process.env.AI_COMMIT_OPENAI_KEY;
+    keys.openaiApiKey = process.env.AI_COMMIT_OPENAI_KEY;
   }
+  return keys;
+}
 
-  try {
-    const raw = readFileSync(CONFIG_PATH, 'utf-8');
-    const fileConfig = JSON.parse(raw);
-    return { ...DEFAULT_CONFIG, ...fileConfig, ...envOverrides };
-  } catch {
-    return { ...DEFAULT_CONFIG, ...envOverrides };
-  }
+/**
+ * 실행에 사용할 설정. 환경변수 키가 파일 설정을 덮어쓴다.
+ * 이 결과는 절대 saveConfig()로 넘기지 않는다 — 환경변수 키가 디스크에 남는다.
+ */
+export function loadConfig() {
+  return { ...DEFAULT_CONFIG, ...readFileConfig(), ...readEnvKeys() };
 }
 
 export function saveConfig(config) {
@@ -51,7 +59,17 @@ function maskKey(key) {
 }
 
 export async function runConfigWizard() {
-  const current = loadConfig();
+  // 환경변수 키는 의도적으로 제외한다. loadConfig()를 쓰면 환경변수로만
+  // 주입한 키가 answers에 섞여 들어가 설정 파일에 평문으로 기록된다.
+  const current = { ...DEFAULT_CONFIG, ...readFileConfig() };
+
+  const envKeys = readEnvKeys();
+  for (const field of Object.keys(envKeys)) {
+    const envVar = field === 'claudeApiKey' ? 'AI_COMMIT_CLAUDE_KEY' : 'AI_COMMIT_OPENAI_KEY';
+    console.log(
+      chalk.dim(`ℹ️  ${envVar} is set — it overrides the config file and will not be saved to disk.`)
+    );
+  }
 
   const answers = await inquirer.prompt([
     {

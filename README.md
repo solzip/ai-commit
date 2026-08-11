@@ -186,7 +186,7 @@ All settings are stored in `~/.ai-commit.json`:
   "conventionalCommit": true,
   "gitmoji": false,
   "maxSuggestions": 3,
-  "claudeModel": "claude-sonnet-4-20250514",
+  "claudeModel": "claude-sonnet-5",
   "openaiModel": "gpt-4o-mini",
   "timeout": 30000
 }
@@ -201,7 +201,7 @@ All settings are stored in `~/.ai-commit.json`:
 | `conventionalCommit` | boolean | `true` | Use Conventional Commits format |
 | `gitmoji` | boolean | `false` | Add gitmoji prefixes |
 | `maxSuggestions` | number | `3` | Number of suggestions to generate |
-| `claudeModel` | string | `"claude-sonnet-4-20250514"` | Claude model to use |
+| `claudeModel` | string | `"claude-sonnet-5"` | Claude model to use |
 | `openaiModel` | string | `"gpt-4o-mini"` | OpenAI model to use |
 | `timeout` | number | `30000` | API request timeout in milliseconds |
 
@@ -232,7 +232,7 @@ Default values
 
 | Provider | Default Model | Max Diff | API |
 |----------|---------------|----------|-----|
-| Claude | claude-sonnet-4-20250514 | ~15,000 chars | [Anthropic Messages API](https://docs.anthropic.com/en/docs/about-claude/models) |
+| Claude | claude-sonnet-5 | ~15,000 chars | [Anthropic Messages API](https://docs.anthropic.com/en/docs/about-claude/models) |
 | OpenAI | gpt-4o-mini | ~12,000 chars | [OpenAI Chat Completions](https://platform.openai.com/docs/models) |
 
 Models can be changed in `~/.ai-commit.json` via `claudeModel` and `openaiModel` without modifying any code.
