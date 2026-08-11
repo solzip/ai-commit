@@ -9,18 +9,25 @@ export function isGitRepo() {
   }
 }
 
+// diff는 truncateDiff()에서 프로바이더 한도로 줄이므로, 읽는 단계에서
+// 막힐 이유가 없다. 기본값 1MB는 lockfile 재생성 하나로도 넘는다.
+const MAX_BUFFER = 256 * 1024 * 1024;
+
 export function getStagedDiff() {
-  const diff = execSync('git diff --staged', { encoding: 'utf-8', maxBuffer: 1024 * 1024 });
+  const diff = execSync('git diff --staged', { encoding: 'utf-8', maxBuffer: MAX_BUFFER });
   return diff.trim();
 }
 
 export function getStagedDiffStat() {
-  const stat = execSync('git diff --staged --stat', { encoding: 'utf-8' });
+  const stat = execSync('git diff --staged --stat', { encoding: 'utf-8', maxBuffer: MAX_BUFFER });
   return stat.trim();
 }
 
 export function getStagedFiles() {
-  const files = execSync('git diff --staged --name-only', { encoding: 'utf-8' });
+  const files = execSync('git diff --staged --name-only', {
+    encoding: 'utf-8',
+    maxBuffer: MAX_BUFFER,
+  });
   return files.trim();
 }
 
