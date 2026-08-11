@@ -10,6 +10,18 @@
     "bin/",
     "src/"
   ],
+  "scripts": {
+    "test": "node --test"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/solzip/ai-commit.git"
+  },
+  "homepage": "https://github.com/solzip/ai-commit#readme",
+  "bugs": {
+    "url": "https://github.com/solzip/ai-commit/issues"
+  },
+  "author": "solzip",
   "keywords": [
     "git",
     "commit",
@@ -22,7 +34,7 @@
   ],
   "license": "MIT",
   "engines": {
-    "node": ">=18.0.0"
+    "node": ">=20.0.0"
   },
   "dependencies": {
     "chalk": "^5.0.0",

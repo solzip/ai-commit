@@ -17,11 +17,16 @@ const DEFAULT_CONFIG = {
   timeout: 30000,
 };
 
-function readFileConfig() {
+/**
+ * 설정 파일에 실제로 저장된 값만 반환한다 (환경변수 제외).
+ * 설정 마법사는 반드시 이쪽을 써야 한다 — loadConfig()를 쓰면
+ * 환경변수로만 주입한 키가 다시 디스크에 기록된다.
+ */
+export function loadFileConfig() {
   try {
-    return JSON.parse(readFileSync(CONFIG_PATH, 'utf-8'));
+    return { ...DEFAULT_CONFIG, ...JSON.parse(readFileSync(CONFIG_PATH, 'utf-8')) };
   } catch {
-    return {};
+    return { ...DEFAULT_CONFIG };
   }
 }
 
@@ -41,7 +46,7 @@ function readEnvKeys() {
  * 이 결과는 절대 saveConfig()로 넘기지 않는다 — 환경변수 키가 디스크에 남는다.
  */
 export function loadConfig() {
-  return { ...DEFAULT_CONFIG, ...readFileConfig(), ...readEnvKeys() };
+  return { ...loadFileConfig(), ...readEnvKeys() };
 }
 
 export function saveConfig(config) {
@@ -61,7 +66,7 @@ function maskKey(key) {
 export async function runConfigWizard() {
   // 환경변수 키는 의도적으로 제외한다. loadConfig()를 쓰면 환경변수로만
   // 주입한 키가 answers에 섞여 들어가 설정 파일에 평문으로 기록된다.
-  const current = { ...DEFAULT_CONFIG, ...readFileConfig() };
+  const current = loadFileConfig();
 
   const envKeys = readEnvKeys();
   for (const field of Object.keys(envKeys)) {

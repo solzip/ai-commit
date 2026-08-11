@@ -1,5 +1,8 @@
 #!/usr/bin/env node
 
+import { readFileSync } from 'fs';
+import { dirname, join } from 'path';
+import { fileURLToPath } from 'url';
 import { Command } from 'commander';
 import inquirer from 'inquirer';
 import chalk from 'chalk';
@@ -7,25 +10,57 @@ import ora from 'ora';
 import { loadConfig, runConfigWizard } from '../src/core/config.js';
 import { isGitRepo, getStagedDiff, getStagedFiles, execCommit } from '../src/core/git.js';
 import { buildPrompt, truncateDiff } from '../src/core/prompt.js';
-import { registerBuiltInProviders, getProvider } from '../src/providers/registry.js';
+import {
+  registerBuiltInProviders,
+  getProvider,
+  getAvailableProviders,
+} from '../src/providers/registry.js';
 
 registerBuiltInProviders();
+
+// package.json을 단일 출처로 삼는다 (버전 문자열 이중 관리 방지)
+const pkg = JSON.parse(
+  readFileSync(join(dirname(fileURLToPath(import.meta.url)), '..', 'package.json'), 'utf-8')
+);
+
+const LANGUAGES = ['en', 'ko'];
+
+/** 프롬프트를 띄울 수 있는 환경인가 (CI, 파이프, 훅에서는 불가) */
+function isInteractive() {
+  return Boolean(process.stdin.isTTY && process.stdout.isTTY);
+}
+
+function failNonInteractive(reason, hints) {
+  console.error(chalk.red(`❌ ${reason}`));
+  console.error(chalk.dim('   Not running in an interactive terminal, so aicommit cannot prompt.'));
+  for (const hint of hints) console.error(chalk.dim(`   ${hint}`));
+  process.exit(1);
+}
 
 const program = new Command();
 
 program
   .name('aicommit')
   .description('AI-powered git commit message generator')
-  .version('1.0.0')
-  .option('--provider <name>', 'AI provider (claude, openai)')
-  .option('--lang <code>', 'Language (en, ko)')
+  .version(pkg.version)
+  .option('--provider <name>', `AI provider (${getAvailableProviders().join(', ')})`)
+  .option('--lang <code>', `Language (${LANGUAGES.join(', ')})`)
   .option('--gitmoji', 'Add gitmoji to commit messages')
+  .option('--no-gitmoji', 'Disable gitmoji even if enabled in config')
+  .option('-y, --yes', 'Commit the first suggestion without prompting')
   .action(run);
 
 program
   .command('config')
   .description('Configure API keys and preferences')
-  .action(runConfigWizard);
+  .action(() => {
+    if (!isInteractive()) {
+      failNonInteractive('Cannot run the setup wizard.', [
+        'Set AI_COMMIT_CLAUDE_KEY or AI_COMMIT_OPENAI_KEY instead.',
+      ]);
+    }
+    return runConfigWizard();
+  });
 
 program.parse();
 
@@ -36,12 +71,32 @@ async function run(opts) {
     process.exit(1);
   }
 
-  // 2. staged changes 확인
+  // 2. config 로드 + 옵션 검증 (API 호출이나 프롬프트보다 먼저)
+  const config = loadConfig();
+  const providerName = opts.provider || config.provider;
+  const language = opts.lang || config.language;
+
+  if (!getAvailableProviders().includes(providerName)) {
+    console.error(
+      chalk.red(
+        `❌ Unknown provider: ${providerName}. Available: ${getAvailableProviders().join(', ')}`
+      )
+    );
+    process.exit(1);
+  }
+
+  if (!LANGUAGES.includes(language)) {
+    console.error(chalk.red(`❌ Unknown language: ${language}. Available: ${LANGUAGES.join(', ')}`));
+    process.exit(1);
+  }
+
+  // 3. staged changes 확인
   let diff;
   try {
     diff = getStagedDiff();
-  } catch {
+  } catch (err) {
     console.error(chalk.red('❌ Failed to read git diff'));
+    console.error(chalk.dim(`   ${err.message}`));
     process.exit(1);
   }
 
@@ -50,37 +105,37 @@ async function run(opts) {
     process.exit(1);
   }
 
-  // 2-1. staged 파일 목록 표시
+  // 3-1. staged 파일 목록 표시
   const stagedFiles = getStagedFiles();
   console.log(chalk.dim(`\nStaged files:\n${stagedFiles.split('\n').map(f => `  ${f}`).join('\n')}\n`));
 
-  // 3. config 로드
-  const config = loadConfig();
-  const providerName = opts.provider || config.provider;
-  const language = opts.lang || config.language;
-  const apiKeyField = `${providerName}ApiKey`;
-  const apiKey = config[apiKeyField];
+  // 4. API 키 확인
+  const apiKey = config[`${providerName}ApiKey`];
 
   if (!apiKey) {
+    const envVar = `AI_COMMIT_${providerName.toUpperCase()}_KEY`;
+    if (!isInteractive()) {
+      failNonInteractive(`API key not configured for ${providerName}.`, [
+        `Set ${envVar}, or run 'aicommit config' in a terminal.`,
+      ]);
+    }
     console.log(chalk.yellow(`\n⚠️  API key not configured for ${providerName}.`));
     const { runSetup } = await inquirer.prompt([
       { type: 'confirm', name: 'runSetup', message: 'Run setup now?', default: true },
     ]);
-    if (runSetup) {
-      await runConfigWizard();
-      return run(opts);
+    if (!runSetup) process.exit(1);
+    await runConfigWizard();
+
+    // 마법사를 마쳤는데도 키가 없으면 재귀가 무한히 돈다.
+    if (!loadConfig()[`${providerName}ApiKey`]) {
+      console.error(chalk.red(`❌ Still no API key for ${providerName}. Aborting`));
+      process.exit(1);
     }
-    process.exit(1);
+    return run(opts);
   }
 
-  // 4. provider 가져오기
-  let provider;
-  try {
-    provider = getProvider(providerName, apiKey, config);
-  } catch (err) {
-    console.error(chalk.red(`❌ ${err.message}`));
-    process.exit(1);
-  }
+  // 5. provider 인스턴스 생성
+  const provider = getProvider(providerName, apiKey, config);
 
   // 5. diff truncate
   const { diff: processedDiff, truncated } = truncateDiff(diff, provider.maxDiffLength);
@@ -92,16 +147,30 @@ async function run(opts) {
   const options = {
     language,
     conventionalCommit: config.conventionalCommit,
-    gitmoji: opts.gitmoji || config.gitmoji || false,
+    // --gitmoji / --no-gitmoji 를 주지 않으면 undefined 이므로 config로 넘어간다.
+    // ||를 쓰면 --no-gitmoji(false)가 config 값에 덮여 무시된다.
+    gitmoji: opts.gitmoji ?? config.gitmoji ?? false,
     maxSuggestions: config.maxSuggestions,
   };
 
-  await generateAndSelect(provider, processedDiff, options);
+  await generateAndSelect(provider, processedDiff, options, opts.yes);
 }
 
-async function generateAndSelect(provider, diff, options) {
+async function generateAndSelect(provider, diff, options, autoAccept) {
   let messages = await callAI(provider, diff, options);
   if (!messages) return;
+
+  // --yes 또는 비대화형: 첫 제안을 그대로 커밋한다.
+  if (autoAccept || !isInteractive()) {
+    if (!autoAccept) {
+      console.log(chalk.dim('Non-interactive terminal — using the first suggestion (--yes).'));
+    }
+    console.log(chalk.bold('\n📝 Suggested commit messages:\n'));
+    messages.forEach((msg, i) => console.log(`  ${chalk.cyan(i + 1 + '.')} ${msg}`));
+    console.log();
+    await doCommit(messages[0]);
+    return;
+  }
 
   while (true) {
     const result = await promptUser(messages);
