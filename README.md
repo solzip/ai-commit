@@ -8,14 +8,22 @@ Analyzes your staged changes and suggests [Conventional Commit](https://www.conv
 
 ## Quick Start
 
-No need to clone this repo. Just run these commands in **your own git project**:
+> ⚠️ **Not published to npm yet.** Install from source until the first release lands.
 
 ```bash
-# 1. Stage your changes
+# 1. Install from source
+git clone https://github.com/solzip/ai-commit.git
+cd ai-commit && npm install && npm link
+```
+
+Then, in **your own git project**:
+
+```bash
+# 2. Stage your changes
 git add .
 
-# 2. Let AI generate your commit message
-npx aicommit
+# 3. Let AI generate your commit message
+aicommit
 ```
 
 On first run, you'll be prompted to set up your API key automatically.
@@ -23,7 +31,7 @@ On first run, you'll be prompted to set up your API key automatically.
 ## Demo
 
 ```
-$ npx aicommit
+$ aicommit
 
 Staged files:
   src/auth/login.js
@@ -67,7 +75,7 @@ With `--gitmoji`:
 - **Gitmoji** — Optional emoji prefixes (`--gitmoji`) for ✨ 🐛 ♻️ and more
 - **Multilingual** — English and Korean commit messages (`--lang ko`)
 - **Interactive** — Select, edit, or regenerate suggestions in a loop
-- **Zero config start** — Works with `npx`, auto-prompts setup on first run
+- **Zero config start** — Auto-prompts API key setup on first run
 - **Staged file preview** — Shows which files will be committed before AI analysis
 - **Configurable models** — Change AI models without touching code
 - **Request timeout** — 30-second fetch timeout prevents hanging on slow networks
@@ -75,13 +83,16 @@ With `--gitmoji`:
 
 ## Install
 
-```bash
-# Option 1: Use directly with npx (no install needed)
-npx aicommit
+Not published to npm yet — install from source:
 
-# Option 2: Install globally for faster access
-npm install -g aicommit
+```bash
+git clone https://github.com/solzip/ai-commit.git
+cd ai-commit
+npm install
+npm link              # makes `aicommit` available globally
 ```
+
+To remove later: `npm unlink -g aicommit`
 
 **Requirements:** Node.js >= 18
 

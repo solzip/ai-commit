@@ -8,12 +8,22 @@ AI 기반 git 커밋 메시지 자동 생성 CLI 도구.
 
 이 저장소를 클론할 필요 없습니다. **본인의 git 프로젝트**에서 바로 실행하세요:
 
+> ⚠️ **아직 npm에 발행되지 않았습니다.** 첫 릴리스 전까지는 소스에서 설치해 주세요.
+
 ```bash
-# 1. 변경사항 스테이징
+# 1. 소스에서 설치
+git clone https://github.com/solzip/ai-commit.git
+cd ai-commit && npm install && npm link
+```
+
+그다음 **본인의 git 프로젝트**에서:
+
+```bash
+# 2. 변경사항 스테이징
 git add .
 
-# 2. AI가 커밋 메시지 생성
-npx aicommit
+# 3. AI가 커밋 메시지 생성
+aicommit
 ```
 
 처음 실행하면 API 키 설정을 자동으로 안내합니다.
@@ -21,7 +31,7 @@ npx aicommit
 ## 데모
 
 ```
-$ npx aicommit
+$ aicommit
 
 Staged files:
   src/auth/login.js
@@ -65,7 +75,7 @@ Staged files:
 - **Gitmoji** — 이모지 접두사 지원 (`--gitmoji`) ✨ 🐛 ♻️ 등
 - **다국어** — 영어/한국어 커밋 메시지 (`--lang ko`)
 - **대화형** — 메시지 선택, 수정, 재생성을 반복 가능
-- **설치 불필요** — `npx`로 바로 사용, 처음 실행 시 자동 설정 안내
+- **설정 없이 시작** — 처음 실행 시 API 키 설정을 자동 안내
 - **Staged 파일 미리보기** — AI 분석 전 어떤 파일이 커밋되는지 확인
 - **모델 설정 가능** — 코드 수정 없이 AI 모델 변경
 - **요청 타임아웃** — 30초 fetch 타임아웃으로 느린 네트워크 대응
@@ -73,13 +83,16 @@ Staged files:
 
 ## 설치
 
-```bash
-# 방법 1: npx로 바로 사용 (설치 불필요)
-npx aicommit
+아직 npm에 발행되지 않았습니다 — 소스에서 설치합니다:
 
-# 방법 2: 전역 설치 (더 빠른 실행)
-npm install -g aicommit
+```bash
+git clone https://github.com/solzip/ai-commit.git
+cd ai-commit
+npm install
+npm link              # `aicommit` 명령을 전역에서 사용 가능하게 함
 ```
+
+제거할 때: `npm unlink -g aicommit`
 
 **요구사항:** Node.js >= 18
 
