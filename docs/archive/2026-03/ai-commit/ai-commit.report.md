@@ -163,13 +163,13 @@ bin/ai-commit.js
 
 | Commit | Message |
 |---|---|
-| `162c7e9` | chore: initial commit |
-| `11be96e` | docs: add ai-commit plan document with plugin architecture design |
-| `943892d` | feat: implement ai-commit CLI with plugin architecture |
-| `9bd2ab6` | docs: add Korean README |
-| `abbf6fe` | docs: clarify installation and usage instructions in README |
-| `897e123` | chore: rename package from ai-commit to aicommit |
-| `5fe87d9` | feat: add gitmoji support |
-| `ce426ce` | feat: improve UX and add fetch timeout, configurable models |
-| `bb9a8bb` | docs: sync Plan/Design/Analysis with current implementation |
-| `a970388` | docs: add PDCA completion report and rewrite README |
+| `71e7ab7` | chore: initial commit |
+| `aaab755` | docs: add ai-commit plan document with plugin architecture design |
+| `c0cfd92` | feat: implement ai-commit CLI with plugin architecture |
+| `879b015` | docs: add Korean README |
+| `a0bc511` | docs: clarify installation and usage instructions in README |
+| `9fdb8fe` | chore: rename package from ai-commit to aicommit |
+| `af084af` | feat: add gitmoji support |
+| `c3f9505` | feat: improve UX and add fetch timeout, configurable models |
+| `483135f` | docs: sync Plan/Design/Analysis with current implementation |
+| `662c500` | docs: add PDCA completion report and rewrite README |

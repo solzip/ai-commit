@@ -62,7 +62,7 @@
 | G-01 | `getProvider()` 시그니처 `(name, apiKey)` → `(name, apiKey, config)` | Changed | `registry.js:10` | 하위 호환, config 전달용 |
 | G-02 | Provider 생성자 `(apiKey)` → `(apiKey, config)` | Changed | `claude.js:5`, `openai.js:5` | model/timeout 설정 전달 |
 | G-04 | API 500+ 에러 메시지에 status code 추가 | Changed | `claude.js:42`, `openai.js:42` | 더 정보적 |
-| G-05 | package name `ai-commit` → `aicommit` | Changed | `package.json:2` | 의도적 리네이밍 (commit 897e123) |
+| G-05 | package name `ai-commit` → `aicommit` | Changed | `package.json:2` | 의도적 리네이밍 (commit 9fdb8fe) |
 | G-06 | `getStagedFiles()` 함수 추가 | Added | `git.js:22-25` | staged 파일 목록 표시용 |
 | G-07 | Staged 파일 목록 실행 전 표시 | Added | `bin/ai-commit.js:54-55` | UX 개선 |
 | G-08 | Config wizard 자동 안내 | Added | `bin/ai-commit.js:65-74` | 첫 사용자 UX |
