@@ -370,6 +370,7 @@ ai-commit/
 │   ├── parse.test.js              # Response parsing
 │   ├── providers.test.js          # Provider contracts + error paths
 │   └── safety.test.js             # Shell safety, large diffs, key isolation
+├── docs/archive/2026-03/           # PDCA records: plan → design → analysis → report
 ├── .github/workflows/ci.yml
 ├── package.json
 ├── README.md

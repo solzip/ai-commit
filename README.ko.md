@@ -373,6 +373,7 @@ ai-commit/
 │   ├── parse.test.js              # 응답 파싱
 │   ├── providers.test.js          # 프로바이더 계약 + 오류 경로
 │   └── safety.test.js             # 셸 안전성, 대용량 diff, 키 격리
+├── docs/archive/2026-03/           # PDCA 기록: plan → design → analysis → report
 ├── .github/workflows/ci.yml
 └── .gitignore
 ```

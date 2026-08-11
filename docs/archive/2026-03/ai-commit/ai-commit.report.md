@@ -8,7 +8,7 @@
 |---|---|
 | Feature | ai-commit CLI |
 | Started | 2026-03-27 |
-| Completed | 2026-03-27 |
+| Completed | 2026-03-31 |
 | Duration | 1 session |
 | Match Rate | 92% |
 | Iterations | 0 (no code fix needed) |
@@ -172,3 +172,4 @@ bin/ai-commit.js
 | `5fe87d9` | feat: add gitmoji support |
 | `ce426ce` | feat: improve UX and add fetch timeout, configurable models |
 | `bb9a8bb` | docs: sync Plan/Design/Analysis with current implementation |
+| `a970388` | docs: add PDCA completion report and rewrite README |
